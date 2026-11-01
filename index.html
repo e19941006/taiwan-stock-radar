@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛰️ 台股多頭雷達 (絕對五星嚴選版)</title>
+    <!-- 引入 Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 🌟 鈦金屬與槍灰色系背景 */
+        body { 
+            background-color: #121418;
+            background-image: 
+                linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.4) 100%),
+                radial-gradient(circle at 15% 15%, rgba(65, 72, 86, 0.4) 0%, transparent 60%);
+            background-attachment: fixed;
+            color: #f8fafc; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
+            padding: 25px; 
+            margin: 0; 
+            padding-bottom: 120px;
+        }
+        
+        /* 🌟 金屬浮雕面板 */
+        .control-panel { 
+            background: linear-gradient(145deg, #2a303c 0%, #1d212a 100%);
+            border: 1px solid #475060;
+            border-top: 1px solid #5a6578;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
+            padding: 20px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 12px; }
+        .panel-title { font-size: 16px; color: #cbd5e1; display: flex; align-items: center; gap: 8px; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        
+        .history-zone { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .history-label { font-size: 13px; color: #94a3b8; }
+        
+        /* 金屬深碳灰選單 */
+        .history-dropdown { 
+            background: linear-gradient(to bottom, #2e3543 0%, #202632 100%); 
+            color: #f1f5f9; 
+            border: 1px solid #4a5468; 
+            border-top: 1px solid #63728a; 
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 3px 6px rgba(0,0,0,0.4);
+            padding: 7px 14px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            font-weight: 500;
+            outline: none; 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+            transition: all 0.2s ease;
+        }
+        .history-dropdown:hover { 
+            border-color: #718096; 
+            background: linear-gradient(to bottom, #3a4252 0%, #252c3a 100%); 
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .history-dropdown option { background-color: #202632; color: #f1f5f9; }
+
+        .progress-container { 
+            background: #0f1115; 
+            border: 1px solid #2d333f;
+            border-bottom: 1px solid #414a5a; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+            height: 8px; 
+            border-radius: 4px; 
+            overflow: hidden; 
+            margin-bottom: 8px; 
+        }
+        
+        /* 金屬深紫色調進度條 */
+        .progress-bar { 
+            background: linear-gradient(90deg, #1e0b36 0%, #4c1d95 30%, #d8b4fe 50%, #4c1d95 70%, #1e0b36 100%); 
+            background-size: 200% 100%;
+            animation: metalShine 2s infinite linear;
+            width: 0%; height: 100%; transition: width 0.3s ease; 
+        }
+        @keyframes metalShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .status-text { font-size: 13px; color: #94a3b8; display: flex; justify-content: space-between; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        .card { 
+            background: linear-gradient(145deg, #2a303c 0%, #1d212a 100%);
+            border: 1px solid #475060; border-top: 1px solid #5a6578;
+            padding: 18px; border-radius: 10px; 
+            box-shadow: 0 8px 15px -3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05); 
+            animation: pop 0.4s ease; display: flex; flex-direction: column; justify-content: space-between; 
+        }
+        @keyframes pop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .stock-name { font-size: 18px; font-weight: bold; color: #f1f5f9; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .stock-id { font-size: 12px; color: #94a3b8; font-family: monospace; }
+        
+        .sector-tag {
+            display: inline-block;
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            color: #d8b4fe;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+            font-weight: normal;
+            text-shadow: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .dog-link {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 11px;
+            color: #93c5fd;
+            text-decoration: none;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            vertical-align: middle;
+        }
+        .dog-link:hover {
+            background: rgba(59, 130, 246, 0.3);
+            color: #bfdbfe;
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.4);
+        }
+
+        .fire-rating-box { text-align: right; margin-top: -2px; }
+        .fire-rating-title { font-size: 10px; color: #94a3b8; font-weight: bold; margin-bottom: 3px; }
+        .fire-rating-icons { font-size: 12px; letter-spacing: 0.5px; } 
+        .fire-active { text-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
+        .fire-inactive { opacity: 0.15; filter: grayscale(100%); }
+
+        .price-compare { 
+            display: flex; justify-content: space-between; background: #111318; 
+            border: 1px solid #2d333f; border-bottom: 1px solid #414a5a;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.4);
+            padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; 
+        }
+        .comp-item { display: flex; flex-direction: column; align-items: center; width: 33%; }
+        .comp-item:not(:last-child) { border-right: 1px solid #2d333f; }
+        .comp-label { color: #64748b; font-size: 11px; margin-bottom: 4px; }
+        .comp-val-old { color: #94a3b8; font-weight: bold; font-family: monospace; font-size: 15px; }
+        .comp-val-new { color: #e2e8f0; font-weight: bold; font-family: monospace; font-size: 15px; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
+        .comp-val-return { font-weight: bold; font-family: monospace; font-size: 16px; }
+
+        .chart-container { 
+            background: #0b0c10; border: 1px solid #2d333f; border-bottom: 1px solid #414a5a;
+            box-shadow: inset 0 3px 8px rgba(0,0,0,0.5); border-radius: 6px; 
+            padding: 10px 6px 6px 6px; margin-bottom: 12px; display: block; position: relative; 
+        }
+        .chart-legend { position: absolute; top: 4px; left: 8px; font-size: 10px; color: #64748b; z-index: 10;}
+        .legend-5ma { color: #eab308; }
+        .legend-20ma { color: #3b82f6; }
+        canvas { display: block; width: 100%; height: 110px; }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { 
+            background: linear-gradient(to bottom, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05)); 
+            color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+            padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; 
+        }
+        
+        .loader-icon { display: inline-block; width: 12px; height: 12px; border: 2px solid #a855f7; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .error-text { color: #ef4444; font-size: 13px; font-weight: bold; text-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
+
+        /* ================= 金屬風格動態 PCR 儀表板 ================= */
+        .pcr-panel { 
+            position: fixed; bottom: 20px; right: 20px; 
+            background: linear-gradient(145deg, rgba(42, 48, 60, 0.95) 0%, rgba(29, 33, 42, 0.95) 100%);
+            border: 1px solid #475060; border-top: 1px solid #5a6578;
+            border-radius: 12px; width: 320px; 
+            box-shadow: 0 15px 35px -5px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); 
+            z-index: 1000; backdrop-filter: blur(10px); transition: all 0.3s ease; 
+        }
+        .pcr-header { 
+            padding: 12px 15px; background: rgba(0,0,0,0.1); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; color: #a855f7; user-select: none; border-radius: 12px 12px 0 0; border-bottom: 1px solid transparent; 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .pcr-header:hover { background: rgba(255,255,255,0.05); }
+        .pcr-content { padding: 15px; display: block; }
+
+        .gauge-wrapper { 
+            background: #0b0c10; 
+            border: 1px solid #2d333f; border-bottom: 1px solid #414a5a;
+            box-shadow: inset 0 6px 12px rgba(0,0,0,0.7); 
+            border-radius: 8px; 
+            padding: 22px 15px 25px 15px; 
+            position: relative; width: 100%; box-sizing: border-box; 
+            display: flex; flex-direction: column; align-items: center; 
+            margin-bottom: 20px; 
+        }
+        .gauge-svg { width: 100%; max-width: 230px; overflow: visible; display: block; margin: 0 auto; }
+        .gauge-needle { transform-origin: 50px 50px; transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(0deg); } 
+        
+        .pcr-value-box { text-align: center; width: 100%; margin-bottom: 15px; position: relative; }
+        .pcr-value { font-size: 28px; font-weight: bold; font-family: monospace; color: #f8fafc; line-height: 1; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+        .pcr-date { font-size: 10px; color: #64748b; margin-top: 4px; }
+        
+        .pcr-status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-top: 6px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+
+        .pcr-input-wrapper { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+        .pcr-input { 
+            background: #111318; border: 1px solid #475060; color: #f1f5f9; 
+            padding: 6px 10px; border-radius: 6px; width: 80px; font-family: monospace; text-align: center; 
+            font-size: 14px; outline: none; transition: border-color 0.2s;
+        }
+        .pcr-input:focus { border-color: #a855f7; box-shadow: 0 0 5px rgba(168, 85, 247, 0.4); }
+        .pcr-input-btn { 
+            background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%); border: none; color: white; 
+            padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; 
+            transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+        .pcr-input-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+        .pcr-input-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+
+        .pcr-quick-link {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #93c5fd;
+            text-decoration: none;
+            transition: color 0.2s;
+            border-bottom: 1px dashed rgba(147, 197, 253, 0.5);
+            padding-bottom: 1px;
+        }
+        .pcr-quick-link:hover { color: #bfdbfe; border-bottom-color: #bfdbfe; }
+
+        .pcr-rules { list-style: none; padding: 0; margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.6; border-top: 1px dashed #475060; padding-top: 15px; }
+        .pcr-rules li { display: flex; align-items: flex-start; margin-bottom: 8px; }
+        .pcr-rules .dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; margin-top: 4px; display: inline-block; flex-shrink: 0; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        .pcr-rules b { color: #f8fafc; margin-right: 5px; min-width: 95px; display: inline-block;}
+        .pcr-desc { color: #94a3b8; font-size: 11px; }
+
+        .timer-badge { font-family: monospace; color: #3b82f6; font-size: 14px; font-weight: bold; margin-right: 15px; text-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <span id="scan-icon" class="loader-icon"></span>
+                <span id="panel-status-title">多頭主力雷達 (載入中)...</span>
+            </div>
+            <div class="history-zone">
+                <span class="history-label">📁 觀察名單:</span>
+                <select id="history-select" class="history-dropdown">
+                    <option value="live">📡 執行今日即時掃描</option>
+                </select>
+                
+                <span class="history-label" style="margin-left: 8px;">🎯 嚴格度:</span>
+                <select id="filter-select" class="history-dropdown" style="border-color:#eab308;">
+                    <option value="5">🔥 5星以上 (主力進駐)</option>
+                    <option value="7">🔥🔥 7星以上 (強勢主升)</option>
+                    <option value="9">🔥🔥🔥 9星以上 (極品飆股)</option>
+                    <option value="10">🌟 10星滿分 (大滿貫)</option>
+                </select>
+
+                <span class="history-label" style="margin-left: 8px;">📊 排序:</span>
+                <select id="sort-select" class="history-dropdown">
+                    <option value="fire-desc">🔥 推薦指數：高到低</option>
+                    <option value="fire-asc">🔥 推薦指數：低到高</option>
+                    <option value="none">⚡ 預設時間排序</option>
+                    <option value="price-desc">💵 股價：高到低</option>
+                    <option value="price-asc">💵 股價：低到高</option>
+                </select>
+            </div>
+        </div>
+        <div id="progress-area">
+            <div class="progress-container">
+                <div id="progress" class="progress-bar"></div>
+            </div>
+            <div class="status-text">
+                <span id="current-action">正在系統安全檢測與初始化...</span>
+                <div>
+                    <span id="timer-display" class="timer-badge">⏱️ 00:00</span>
+                    <span id="percentage">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="grid" class="grid"></div>
+
+    <div id="pcr-dashboard" class="pcr-panel">
+        <div class="pcr-header" onclick="togglePcr()">
+            <span id="pcr-header-title">📊 選擇權多空比 (手動純淨版)</span>
+            <div>
+                <span id="pcr-toggle-icon">▼</span>
+            </div>
+        </div>
+        <div id="pcr-content" class="pcr-content">
+            <div class="gauge-wrapper">
+                <div class="pcr-value-box">
+                    <div id="pcr-value-text" class="pcr-value">--.-%</div>
+                    <div id="pcr-status-badge" class="pcr-status-badge" style="background:#334155; color:#cbd5e1;">等待輸入...</div>
+                    <div id="pcr-date-text" class="pcr-date">更新日期: 請手動輸入數值</div>
+                    
+                    <a href="https://www.wantgoo.com/option/put-call-ratio" target="_blank" class="pcr-quick-link">🔗 點此查詢玩股網最新 PCR</a>
+
+                    <div class="pcr-input-wrapper">
+                        <input type="number" id="pcr-manual-input" class="pcr-input" placeholder="填入 PCR" step="0.01">
+                        <button class="pcr-input-btn" onclick="applyManualPCR()">手動更新</button>
+                    </div>
+                </div>
+
+                <svg viewBox="0 0 100 50" class="gauge-svg">
+                    <defs>
+                        <linearGradient id="pcrGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#3b82f6" />
+                            <stop offset="25%" stop-color="#22c55e" />
+                            <stop offset="50%" stop-color="#eab308" />
+                            <stop offset="75%" stop-color="#f97316" />
+                            <stop offset="100%" stop-color="#ef4444" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#1e293b" stroke-width="12" stroke-linecap="round" />
+                    <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#pcrGradient)" stroke-width="12" stroke-linecap="round" />
+                    <g id="gauge-needle" class="gauge-needle">
+                        <line x1="50" y1="50" x2="18" y2="50" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
+                        <circle cx="50" cy="50" r="4" fill="#cbd5e1" stroke="#475060" stroke-width="1" />
+                        <circle cx="50" cy="50" r="2" fill="#0f1115" />
+                    </g>
+                    <text x="2" y="58" fill="#f8fafc" font-size="8.5" font-weight="900" style="text-shadow: 0 1px 3px rgba(0,0,0,0.8);">70%</text>
+                    <text x="98" y="58" fill="#f8fafc" font-size="8.5" font-weight="900" text-anchor="end" style="text-shadow: 0 1px 3px rgba(0,0,0,0.8);">130%</text>
+                </svg>
+            </div>
+            <ul class="pcr-rules">
+                <li><span class="dot" style="background:#ef4444"></span><div><b>> 120% (過熱)</b><div class="pcr-desc">散戶大買 Call。逢高防守或反向</div></div></li>
+                <li><span class="dot" style="background:#f97316"></span><div><b>> 100% (偏多)</b><div class="pcr-desc">買 Call > Put。順勢偏多拉回找買點</div></div></li>
+                <li><span class="dot" style="background:#eab308"></span><div><b>= 100% (平衡)</b><div class="pcr-desc">多空震盪。觀望或建立中性策略</div></div></li>
+                <li><span class="dot" style="background:#22c55e"></span><div><b>&lt; 100% (偏空)</b><div class="pcr-desc">買 Put > Call。順勢偏空反彈找空點</div></div></li>
+                <li><span class="dot" style="background:#3b82f6"></span><div><b>&lt; 80% (過冷)</b><div class="pcr-desc">散戶大買 Put。極度悲觀，逢低抄底</div></div></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        // 🌟 1. Supabase 雲端資料庫設定區
+        // 請將下方兩個引號內的字串替換為您在 Supabase 取得的 Project URL 與 anon key
+        // ================================================================
+        const SUPABASE_URL = 'https://dyunjwlwrpudhvfgzoyy.supabase.co/rest/v1/';
+        const SUPABASE_ANON_KEY = 'sb_publishable_o7FBfYGzSa0z9E_bmkVDlQ_MSy8KFIq';
+        
+        // 初始化 Supabase 客戶端 (未填寫金鑰時會自動啟用 LocalStorage 安全降級模式)
+        const isSupabaseConfigured = SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co' && !SUPABASE_URL.includes('YOUR_PROJECT_ID');
+        const supabaseClient = (isSupabaseConfigured && typeof supabase !== 'undefined')
+            ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : null;
+
+        const TODAY_PCR_VALUE = 114.67; 
+        const TODAY_PCR_DATE  = "本期最新"; 
+        
+        const TWSE_HOLIDAYS = [
+            "2026-01-01", "2026-01-02", 
+            "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", 
+            "2026-02-27", "2026-03-02", 
+            "2026-04-03", "2026-04-06", 
+            "2026-05-01", 
+            "2026-06-19", 
+            "2026-09-25", 
+            "2026-10-09", "2026-10-10"
+        ];
+
+        const STORAGE_KEY = 'taiwan_stock_radar_db';
+        let liveScannedResults = []; 
+        let currentPool = []; 
+        let memoryDB = {}; // 本機與快取資料庫
+
+        window.officialTradingDate = null; 
+        let activeFastProxy = null; 
+
+        // 🌟 完整 301 檔台股監控標的池
+        const masterPool = [
+            {id:'2330.TW', name:'台積電', sector:'晶圓代工'}, {id:'2303.TW', name:'聯電', sector:'晶圓代工'}, {id:'2454.TW', name:'聯發科', sector:'IC設計'}, {id:'3711.TW', name:'日月光投控', sector:'封測'},
+            {id:'3443.TW', name:'創意', sector:'矽智財'}, {id:'3661.TW', name:'世芯-KY', sector:'矽智財'}, {id:'6643.TW', name:'M31', sector:'矽智財'}, {id:'3529.TW', name:'力旺', sector:'矽智財'},
+            {id:'6531.TW', name:'愛普*', sector:'矽智財'}, {id:'5269.TW', name:'祥碩', sector:'IC設計'}, {id:'5274.TW', name:'信驊', sector:'IC設計'}, {id:'4966.TW', name:'譜瑞-KY', sector:'IC設計'},
+            {id:'6415.TW', name:'矽力*-KY', sector:'IC設計'}, {id:'6756.TW', name:'威鋒電子', sector:'IC設計'}, {id:'6104.TW', name:'創惟', sector:'IC設計'}, {id:'2458.TW', name:'義隆', sector:'IC設計'},
+            {id:'2449.TW', name:'京元電子', sector:'封測'}, {id:'2337.TW', name:'旺宏', sector:'記憶體'}, {id:'2344.TW', name:'華邦電', sector:'記憶體'}, {id:'2408.TW', name:'南亞科', sector:'記憶體'},
+            {id:'2379.TW', name:'瑞昱', sector:'IC設計'}, {id:'3034.TW', name:'聯詠', sector:'IC設計'}, {id:'3035.TW', name:'智原', sector:'IC設計'}, {id:'5483.TW', name:'中美晶', sector:'半導體'},
+            {id:'6488.TW', name:'環球晶', sector:'半導體'}, {id:'6147.TW', name:'頎邦', sector:'封測'}, {id:'3702.TW', name:'大聯大', sector:'通路'}, {id:'3036.TW', name:'文曄', sector:'通路'},
+            {id:'2347.TW', name:'聯強', sector:'通路'}, {id:'8299.TW', name:'群聯', sector:'IC設計'}, {id:'6239.TW', name:'力成', sector:'封測'}, {id:'4961.TW', name:'天鈺', sector:'IC設計'},
+            {id:'4919.TW', name:'新唐', sector:'IC設計'}, {id:'6138.TW', name:'茂達', sector:'IC設計'}, {id:'2439.TW', name:'美律', sector:'電子零組件'}, {id:'8081.TW', name:'致新', sector:'IC設計'},
+            {id:'3532.TW', name:'台勝科', sector:'半導體'}, {id:'8112.TW', name:'至上', sector:'通路'}, {id:'8150.TW', name:'南茂', sector:'封測'}, {id:'3227.TW', name:'原相', sector:'IC設計'},
+            {id:'6202.TW', name:'盛群', sector:'IC設計'}, {id:'5351.TW', name:'鈺創', sector:'IC設計'}, {id:'3006.TW', name:'晶豪科', sector:'IC設計'}, {id:'3583.TW', name:'辛耘', sector:'設備儀器'},
+            {id:'3131.TW', name:'弘塑', sector:'設備儀器'}, {id:'6515.TW', name:'穎崴', sector:'設備儀器'}, {id:'6683.TW', name:'雍智科技', sector:'設備儀器'}, {id:'3680.TW', name:'家登', sector:'設備儀器'},
+            {id:'5347.TW', name:'世界', sector:'晶圓代工'}, {id:'6770.TW', name:'力積電', sector:'晶圓代工'}, {id:'3014.TW', name:'聯陽', sector:'IC設計'}, {id:'3545.TW', name:'敦泰', sector:'IC設計'},
+            {id:'2401.TW', name:'凌陽', sector:'IC設計'}, {id:'3228.TW', name:'金麗科', sector:'IC設計'}, {id:'3094.TW', name:'聯傑', sector:'IC設計'}, {id:'3122.TW', name:'笙泉', sector:'IC設計'},
+            {id:'3294.TW', name:'弘致', sector:'電子零組件'}, {id:'3527.TW', name:'聚積', sector:'IC設計'}, {id:'4952.TW', name:'凌通', sector:'IC設計'}, {id:'5471.TW', name:'松翰', sector:'IC設計'},
+            {id:'6134.TW', name:'萬旭', sector:'電子零組件'}, {id:'6233.TW', name:'旺玖', sector:'IC設計'}, {id:'6462.TW', name:'神盾', sector:'IC設計'}, {id:'8016.TW', name:'矽創', sector:'IC設計'},
+            {id:'2317.TW', name:'鴻海', sector:'AI伺服器'}, {id:'2382.TW', name:'廣達', sector:'AI伺服器'}, {id:'3231.TW', name:'緯創', sector:'AI伺服器'}, {id:'2356.TW', name:'英業達', sector:'AI伺服器'},
+            {id:'2324.TW', name:'仁寶', sector:'電腦週邊'}, {id:'2353.TW', name:'宏碁', sector:'品牌PC'}, {id:'2357.TW', name:'華碩', sector:'品牌PC'}, {id:'2301.TW', name:'光寶科', sector:'電源供應'},
+            {id:'2352.TW', name:'佳世達', sector:'電腦週邊'}, {id:'4938.TW', name:'和碩', sector:'電腦週邊'}, {id:'6669.TW', name:'緯穎', sector:'AI伺服器'}, {id:'3706.TW', name:'神達', sector:'AI伺服器'},
+            {id:'2376.TW', name:'技嘉', sector:'板卡/AI'}, {id:'2377.TW', name:'微星', sector:'板卡/AI'}, {id:'3005.TW', name:'神基', sector:'強固電腦'}, {id:'6206.TW', name:'飛捷', sector:'IPC工業電腦'},
+            {id:'3017.TW', name:'奇鋐', sector:'機殼散熱'}, {id:'3324.TW', name:'雙鴻', sector:'機殼散熱'}, {id:'3013.TW', name:'晟銘電', sector:'機殼散熱'}, {id:'2368.TW', name:'金像電', sector:'PCB'},
+            {id:'2383.TW', name:'台光電', sector:'銅箔基板'}, {id:'3044.TW', name:'健鼎', sector:'PCB'}, {id:'2313.TW', name:'華通', sector:'PCB'}, {id:'3037.TW', name:'欣興', sector:'PCB載板'},
+            {id:'3189.TW', name:'景碩', sector:'PCB載板'}, {id:'8046.TW', name:'南電', sector:'PCB載板'}, {id:'2327.TW', name:'國巨', sector:'被動元件'}, {id:'2492.TW', name:'華新科', sector:'被動元件'},
+            {id:'3653.TW', name:'健策', sector:'機殼散熱'}, {id:'2421.TW', name:'建準', sector:'機殼散熱'}, {id:'6274.TW', name:'台燿', sector:'銅箔基板'}, {id:'6213.TW', name:'聯茂', sector:'銅箔基板'},
+            {id:'3329.TW', name:'竟鼎', sector:'PCB'}, {id:'6121.TW', name:'新普', sector:'電池模組'}, {id:'2316.TW', name:'楠梓電', sector:'PCB'}, {id:'6269.TW', name:'台郡', sector:'軟板'},
+            {id:'2474.TW', name:'可成', sector:'機殼'}, {id:'6235.TW', name:'華孚', sector:'機殼'}, {id:'5243.TW', name:'乙盛-KY', sector:'機殼'}, {id:'2362.TW', name:'藍天', sector:'電腦週邊'},
+            {id:'2385.TW', name:'群光', sector:'電子零組件'}, {id:'6191.TW', name:'精成科', sector:'PCB'}, {id:'5469.TW', name:'瀚宇博', sector:'PCB'}, {id:'6153.TW', name:'嘉聯益', sector:'軟板'},
+            {id:'4958.TW', name:'臻鼎-KY', sector:'PCB'}, {id:'8039.TW', name:'台虹', sector:'軟板材料'}, {id:'2367.TW', name:'燿華', sector:'PCB'}, {id:'2355.TW', name:'敬鵬', sector:'車用PCB'},
+            {id:'6278.TW', name:'台表科', sector:'SMT打件'}, {id:'3042.TW', name:'晶技', sector:'石英元件'}, {id:'2428.TW', name:'興勤', sector:'被動元件'}, {id:'3026.TW', name:'禾伸堂', sector:'被動元件'},
+            {id:'8121.TW', name:'越峰', sector:'被動元件'}, {id:'2457.TW', name:'飛宏', sector:'電源供應'}, {id:'2481.TW', name:'強茂', sector:'二極體'}, {id:'5425.TW', name:'台半', sector:'二極體'},
+            {id:'8261.TW', name:'富鼎', sector:'MOSFET'}, {id:'3376.TW', name:'新日興', sector:'軸承'}, {id:'3548.TW', name:'兆利', sector:'軸承'}, {id:'6115.TW', name:'鎰勝', sector:'線材連接器'},
+            {id:'3533.TW', name:'嘉澤', sector:'連接器'}, {id:'3665.TW', name:'貿聯-KY', sector:'連接線束'}, {id:'3211.TW', name:'順達', sector:'電池模組'}, {id:'6251.TW', name:'定穎投控', sector:'車用PCB'},
+            {id:'2393.TW', name:'億光', sector:'LED'}, {id:'3437.TW', name:'榮創', sector:'LED'}, {id:'2404.TW', name:'漢唐', sector:'無塵室'}, {id:'3413.TW', name:'京鼎', sector:'半導體設備'},
+            {id:'6438.TW', name:'迅得', sector:'自動化設備'}, {id:'2420.TW', name:'新巨', sector:'電源供應'}, {id:'2489.TW', name:'瑞軒', sector:'顯示器'}, {id:'3501.TW', name:'維熹', sector:'電源線材'},
+            {id:'6142.TW', name:'友勁', sector:'網通'}, {id:'6224.TW', name:'聚鼎', sector:'被動元件'}, {id:'8103.TW', name:'瀚荃', sector:'連接器'}, {id:'8163.TW', name:'達方', sector:'電腦週邊'},
+            {id:'8210.TW', name:'勤誠', sector:'伺服器機殼'}, {id:'8213.TW', name:'志超', sector:'PCB'}, {id:'8215.TW', name:'明基材', sector:'偏光板'}, {id:'5340.TW', name:'建榮', sector:'玻纖布'},
+            {id:'6197.TW', name:'佳必琪', sector:'連接器'}, {id:'8109.TW', name:'博大', sector:'電源供應'}, {id:'2423.TW', name:'固緯', sector:'儀器'}, {id:'3005.TW', name:'神基', sector:'強固電腦'},
+            {id:'2345.TW', name:'智邦', sector:'網通'}, {id:'5388.TW', name:'中磊', sector:'網通'}, {id:'6285.TW', name:'啟碁', sector:'網通'}, {id:'3596.TW', name:'智易', sector:'網通'},
+            {id:'3380.TW', name:'明泰', sector:'網通'}, {id:'8069.TW', name:'元太', sector:'電子紙'}, {id:'3293.TW', name:'鈊象', sector:'遊戲'}, {id:'6176.TW', name:'瑞儀', sector:'背光模組'},
+            {id:'3491.TW', name:'昇達科', sector:'微波通訊'}, {id:'3163.TW', name:'波若威', sector:'光通訊'}, {id:'4979.TW', name:'華星光', sector:'光通訊'}, {id:'3234.TW', name:'光環', sector:'光通訊'},
+            {id:'4977.TW', name:'眾達-KY', sector:'光通訊'}, {id:'2419.TW', name:'仲琦', sector:'網通'}, {id:'3450.TW', name:'聯鈞', sector:'光通訊'}, {id:'3081.TW', name:'聯亞', sector:'光通訊'},
+            {id:'4908.TW', name:'前鼎', sector:'光通訊'}, {id:'6451.TW', name:'訊芯-KY', sector:'光通訊'}, {id:'3363.TW', name:'上詮', sector:'光通訊'}, {id:'8011.TW', name:'台通', sector:'網通'},
+            {id:'3045.TW', name:'台灣大', sector:'電信'}, {id:'4904.TW', name:'遠傳', sector:'電信'}, {id:'2412.TW', name:'中華電', sector:'電信'}, {id:'2332.TW', name:'友訊', sector:'網通'},
+            {id:'3062.TW', name:'建漢', sector:'網通'}, {id:'4906.TW', name:'正文', sector:'網通'}, {id:'3558.TW', name:'神準', sector:'網通'}, {id:'6216.TW', name:'居易', sector:'網通'},
+            {id:'2409.TW', name:'友達', sector:'面板'}, {id:'3481.TW', name:'群創', sector:'面板'}, {id:'6116.TW', name:'彩晶', sector:'面板'}, {id:'4960.TW', name:'誠美材', sector:'偏光板'},
+            {id:'3019.TW', name:'亞光', sector:'光學鏡頭'}, {id:'3504.TW', name:'揚明光', sector:'光學鏡頭'}, {id:'3454.TW', name:'晶睿', sector:'安控'}, {id:'2498.TW', name:'宏達電', sector:'AR/VR'},
+            {id:'2388.TW', name:'威盛', sector:'IC設計'}, {id:'3008.TW', name:'大立光', sector:'光學鏡頭'}, {id:'3406.TW', name:'玉晶光', sector:'光學鏡頭'}, {id:'3059.TW', name:'華晶科', sector:'光學鏡頭'},
+            {id:'6220.TW', name:'岳豐', sector:'網通'}, {id:'3518.TW', name:'柏騰', sector:'機殼'}, {id:'3617.TW', name:'碩天', sector:'電源供應'}, {id:'3704.TW', name:'合勤控', sector:'網通'},
+            {id:'6112.TW', name:'邁達特', sector:'資訊服務'}, {id:'6214.TW', name:'精誠', sector:'資訊服務'}, {id:'5478.TW', name:'智冠', sector:'遊戲'}, {id:'6180.TW', name:'橘子', sector:'遊戲'},
+            {id:'3029.TW', name:'零壹', sector:'資訊服務'}, {id:'2471.TW', name:'資通', sector:'資訊服務'}, {id:'2480.TW', name:'敦陽科', sector:'資訊服務'}, {id:'8114.TW', name:'振曜', sector:'電子紙'},
+            {id:'1513.TW', name:'中興電', sector:'機電/重電'}, {id:'1519.TW', name:'華城', sector:'機電/重電'}, {id:'1503.TW', name:'士電', sector:'機電/重電'}, {id:'1514.TW', name:'亞力', sector:'機電/重電'},
+            {id:'1504.TW', name:'東元', sector:'機電'}, {id:'1605.TW', name:'華新', sector:'電線電纜'}, {id:'1609.TW', name:'大亞', sector:'電線電纜'}, {id:'6806.TW', name:'森崴能源', sector:'綠能'},
+            {id:'9958.TW', name:'世紀鋼', sector:'風電/鋼鐵'}, {id:'3708.TW', name:'上緯投控', sector:'風電/化工'}, {id:'1590.TW', name:'亞德客-KY', sector:'自動化'}, {id:'2049.TW', name:'上銀', sector:'自動化'},
+            {id:'8996.TW', name:'高力', sector:'熱交換器'}, {id:'1560.TW', name:'中砂', sector:'半導體材料'}, {id:'1608.TW', name:'華榮', sector:'電線電纜'}, {id:'1611.TW', name:'中電', sector:'光電'},
+            {id:'1612.TW', name:'宏泰', sector:'電線電纜'}, {id:'6244.TW', name:'茂迪', sector:'太陽能'}, {id:'6443.TW', name:'元晶', sector:'太陽能'}, {id:'6477.TW', name:'安集', sector:'太陽能'},
+            {id:'2406.TW', name:'國碩', sector:'太陽能'}, {id:'2059.TW', name:'川湖', sector:'伺服器導軌'}, {id:'2002.TW', name:'中鋼', sector:'鋼鐵'}, {id:'2014.TW', name:'中鴻', sector:'鋼鐵'},
+            {id:'2027.TW', name:'大成鋼', sector:'鋼鐵'}, {id:'2006.TW', name:'東和鋼鐵', sector:'鋼鐵'}, {id:'1507.TW', name:'永大', sector:'電機'}, {id:'1516.TW', name:'川飛', sector:'電機'},
+            {id:'1521.TW', name:'大東', sector:'紡織'}, {id:'1531.TW', name:'高林股', sector:'機電'}, {id:'1535.TW', name:'中宇', sector:'機電工程'}, {id:'1539.TW', name:'巨庭', sector:'木工機'},
+            {id:'4583.TW', name:'台灣精銳', sector:'減速機'}, {id:'2010.TW', name:'春源', sector:'鋼鐵'}, {id:'2015.TW', name:'豐興', sector:'鋼鐵'}, {id:'2020.TW', name:'美亞', sector:'鋼管'},
+            {id:'2031.TW', name:'新光鋼', sector:'鋼鐵'}, {id:'2038.TW', name:'海光', sector:'鋼鐵'}, {id:'2062.TW', name:'橋椿', sector:'金屬衛浴'}, {id:'1615.TW', name:'大山', sector:'電線電纜'},
+            {id:'1618.TW', name:'合機', sector:'電線電纜'}, {id:'1626.TW', name:'艾美特-KY', sector:'家電'}, {id:'1536.TW', name:'和大', sector:'汽車零組件'}, {id:'4526.TW', name:'東台', sector:'工具機'},
+            {id:'2603.TW', name:'長榮', sector:'貨櫃航運'}, {id:'2609.TW', name:'陽明', sector:'貨櫃航運'}, {id:'2615.TW', name:'萬海', sector:'貨櫃航運'}, {id:'2610.TW', name:'華航', sector:'航空'},
+            {id:'2618.TW', name:'長榮航', sector:'航空'}, {id:'2606.TW', name:'裕民', sector:'散裝航運'}, {id:'2637.TW', name:'慧洋-KY', sector:'散裝航運'}, {id:'2633.TW', name:'台灣高鐵', sector:'陸運'},
+            {id:'2605.TW', name:'新興', sector:'散裝航運'}, {id:'2612.TW', name:'中航', sector:'散裝航運'}, {id:'2614.TW', name:'東森', sector:'貿易百貨'}, {id:'5608.TW', name:'四維航', sector:'散裝航運'},
+            {id:'2601.TW', name:'益航', sector:'航運'}, {id:'2607.TW', name:'榮運', sector:'陸運'}, {id:'2608.TW', name:'大榮', sector:'陸運'}, {id:'2616.TW', name:'山隆', sector:'運輸'},
+            {id:'2634.TW', name:'漢翔', sector:'航太'}, {id:'2636.TW', name:'台驊投控', sector:'物流承攬'}, {id:'1301.TW', name:'台塑', sector:'塑化'}, {id:'1303.TW', name:'南亞', sector:'塑化'},
+            {id:'1326.TW', name:'台化', sector:'塑化'}, {id:'6505.TW', name:'台塑化', sector:'油電燃氣'}, {id:'1314.TW', name:'中石化', sector:'塑化'}, {id:'1304.TW', name:'台聚', sector:'塑膠'},
+            {id:'1305.TW', name:'華夏', sector:'塑膠'}, {id:'1308.TW', name:'亞聚', sector:'塑膠'}, {id:'1312.TW', name:'國喬', sector:'塑膠'}, {id:'1309.TW', name:'台達化', sector:'塑膠'},
+            {id:'2201.TW', name:'裕隆', sector:'汽車'}, {id:'2204.TW', name:'中華車', sector:'汽車'}, {id:'2206.TW', name:'三陽工業', sector:'汽機車'}, {id:'1319.TW', name:'東陽', sector:'汽車AM'},
+            {id:'1522.TW', name:'堤維西', sector:'汽車AM'}, {id:'1524.TW', name:'耿鼎', sector:'汽車AM'}, {id:'2231.TW', name:'為升', sector:'胎壓偵測'}, {id:'3346.TW', name:'麗清', sector:'車燈模組'},
+            {id:'6279.TW', name:'胡連', sector:'車用連接器'}, {id:'1339.TW', name:'昭輝', sector:'汽車零組件'}, {id:'1525.TW', name:'江申', sector:'汽車底盤'}, {id:'2227.TW', name:'裕日車', sector:'汽車'},
+            {id:'2233.TW', name:'宇隆', sector:'精密金屬'}, {id:'5288.TW', name:'豐祥-KY', sector:'金屬加工'}, {id:'2105.TW', name:'正新', sector:'輪胎'}, {id:'2106.TW', name:'建大', sector:'輪胎'},
+            {id:'2103.TW', name:'台橡', sector:'橡膠'}, {id:'2140.TW', name:'南帝', sector:'乳膠'}, {id:'2104.TW', name:'國際中橡', sector:'碳煙'}, {id:'2108.TW', name:'南港', sector:'輪胎'},
+            {id:'1101.TW', name:'台泥', sector:'水泥'}, {id:'1102.TW', name:'亞泥', sector:'水泥'}, {id:'1802.TW', name:'台玻', sector:'玻璃陶瓷'}, {id:'2501.TW', name:'國建', sector:'營建'},
+            {id:'2511.TW', name:'太子', sector:'營建'}, {id:'2542.TW', name:'興富發', sector:'營建'}, {id:'2548.TW', name:'華固', sector:'營建'}, {id:'5534.TW', name:'長虹', sector:'營建'},
+            {id:'2504.TW', name:'國產', sector:'預拌混凝土'}, {id:'2515.TW', name:'中工', sector:'營造'}, {id:'2520.TW', name:'冠德', sector:'營建'}, {id:'2534.TW', name:'宏盛', sector:'營建'},
+            {id:'1216.TW', name:'統一', sector:'食品'}, {id:'2912.TW', name:'統一超', sector:'超商百貨'}, {id:'9921.TW', name:'巨大', sector:'自行車'}, {id:'9904.TW', name:'寶成', sector:'製鞋'},
+            {id:'9910.TW', name:'豐泰', sector:'製鞋'}, {id:'9945.TW', name:'潤泰新', sector:'營建百貨'}, {id:'1722.TW', name:'台肥', sector:'肥料'}, {id:'1711.TW', name:'永光', sector:'化學'},
+            {id:'5903.TW', name:'全家', sector:'超商百貨'}, {id:'5904.TW', name:'寶雅', sector:'零售百貨'}, {id:'8454.TW', name:'富邦媒', sector:'電商'}, {id:'2727.TW', name:'王品', sector:'餐飲'},
+            {id:'1795.TW', name:'美時', sector:'生技製藥'}, {id:'4114.TW', name:'健喬', sector:'生技製藥'}, {id:'4743.TW', name:'合一', sector:'新藥開發'}, {id:'1701.TW', name:'中化', sector:'生技製藥'},
+            {id:'4105.TW', name:'東洋', sector:'生技製藥'}, {id:'1707.TW', name:'葡萄王', sector:'保健食品'}, {id:'4162.TW', name:'智擎', sector:'新藥開發'}, {id:'6547.TW', name:'高端疫苗', sector:'疫苗'},
+            {id:'4142.TW', name:'國光生', sector:'疫苗'}, {id:'1736.TW', name:'喬山', sector:'健身器材'}, {id:'8436.TW', name:'大江', sector:'保健美容'}, {id:'1532.TW', name:'勤美', sector:'金屬鑄造'},
+            {id:'1402.TW', name:'遠東新', sector:'化纖紡織'}, {id:'1476.TW', name:'儒鴻', sector:'成衣代工'}, {id:'1477.TW', name:'聚陽', sector:'成衣代工'}, {id:'9914.TW', name:'美利達', sector:'自行車'},
+            {id:'9933.TW', name:'中鼎', sector:'工程統包'}, {id:'9938.TW', name:'百和', sector:'鞋材'}, {id:'1702.TW', name:'南僑', sector:'食品油脂'}, {id:'1210.TW', name:'大成', sector:'食品肉品'},
+            {id:'1215.TW', name:'卜蜂', sector:'食品肉品'}, {id:'1227.TW', name:'佳格', sector:'食品'}, {id:'1710.TW', name:'東聯', sector:'化工'}, {id:'1712.TW', name:'興農', sector:'農藥化工'},
+            {id:'1714.TW', name:'和桐', sector:'化工'}, {id:'1717.TW', name:'長興', sector:'化工樹脂'}, {id:'1723.TW', name:'中碳', sector:'煤化工'}, {id:'1720.TW', name:'生達', sector:'生技製藥'},
+            {id:'4107.TW', name:'邦特', sector:'醫療耗材'}, {id:'4126.TW', name:'太醫', sector:'醫療器材'}, {id:'4155.TW', name:'訊聯', sector:'臍帶血'}, {id:'6446.TW', name:'藥華藥', sector:'新藥開發'},
+            {id:'4128.TW', name:'中天', sector:'生技投資'}, {id:'4119.TW', name:'旭富', sector:'原料藥'}, {id:'1726.TW', name:'永記', sector:'塗料'}, {id:'1733.TW', name:'五鼎', sector:'血糖機'},
+            {id:'3705.TW', name:'永信', sector:'生技製藥'}, {id:'9907.TW', name:'統一實', sector:'馬口鐵'}, {id:'2903.TW', name:'遠百', sector:'百貨'}, {id:'2704.TW', name:'國賓', sector:'飯店'},
+            {id:'2707.TW', name:'晶華', sector:'飯店'}, {id:'2723.TW', name:'美食-KY', sector:'餐飲'}, {id:'2731.TW', name:'雄獅', sector:'旅行社'}, {id:'2905.TW', name:'三商', sector:'百貨零售'},
+            {id:'2915.TW', name:'潤泰全', sector:'紡織量販'}, {id:'8464.TW', name:'億豐', sector:'窗飾'}, {id:'9911.TW', name:'櫻花', sector:'廚衛家電'}, {id:'9917.TW', name:'中保科', sector:'保全'},
+            {id:'9919.TW', name:'康那香', sector:'不織布'}, {id:'9924.TW', name:'福興', sector:'金屬門鎖'}, {id:'9930.TW', name:'中聯資源', sector:'環保'}, {id:'9939.TW', name:'宏全', sector:'包材'},
+            {id:'9940.TW', name:'信義', sector:'房仲'}, {id:'9941.TW', name:'裕融', sector:'車貸金融'}, {id:'9942.TW', name:'茂順', sector:'油封'}, {id:'9943.TW', name:'好樂迪', sector:'KTV休閒'},
+            {id:'1904.TW', name:'正隆', sector:'造紙'}, {id:'1907.TW', name:'永豐餘', sector:'造紙'}, {id:'1909.TW', name:'榮成', sector:'造紙'}, {id:'3028.TW', name:'增你強', sector:'電子通路'},
+            {id:'3030.TW', name:'德律', sector:'檢測設備'}, {id:'3031.TW', name:'佰鴻', sector:'LED'}, {id:'3032.TW', name:'偉訓', sector:'電腦週邊'}, {id:'3033.TW', name:'威健', sector:'電子通路'},
+            {id:'3043.TW', name:'科風', sector:'UPS電源'}, {id:'3046.TW', name:'建碁', sector:'工業電腦'}, {id:'3047.TW', name:'訊舟', sector:'網通'}, {id:'3048.TW', name:'益登', sector:'電子通路'},
+            {id:'3049.TW', name:'和鑫', sector:'觸控面板'}, {id:'3050.TW', name:'鈺德', sector:'光碟片'}, {id:'3051.TW', name:'力特', sector:'偏光板'}, {id:'3052.TW', name:'夆典', sector:'營建機電'},
+            {id:'3054.TW', name:'立萬利', sector:'生技保健'}, {id:'3055.TW', name:'蔚華科', sector:'半導體設備'}, {id:'3090.TW', name:'日電貿', sector:'被動元件'}, {id:'3092.TW', name:'鴻碩', sector:'連接線'},
+            {id:'3130.TW', name:'一零四', sector:'人力銀行'}, {id:'3149.TW', name:'正達', sector:'玻璃加工'}, {id:'3209.TW', name:'全科', sector:'電子通路'}, {id:'3305.TW', name:'昇貿', sector:'錫膏'},
+            {id:'3308.TW', name:'聯德', sector:'沖壓件'}, {id:'3311.TW', name:'閎暉', sector:'手機按鍵'}, {id:'3312.TW', name:'弘憶股', sector:'電子通路'}, {id:'3338.TW', name:'泰碩', sector:'散熱模組'},
+            {id:'3356.TW', name:'奇偶', sector:'安控'}, {id:'3416.TW', name:'融程電', sector:'強固電腦'}, {id:'3432.TW', name:'台端', sector:'連接器'}, {id:'3536.TW', name:'誠創', sector:'面板'},
+            {id:'3550.TW', name:'聯穎', sector:'線材'}, {id:'3591.TW', name:'艾笛森', sector:'LED'}, {id:'3593.TW', name:'祺驊', sector:'健身器材'}, {id:'3605.TW', name:'宏致', sector:'連接器'},
+            {id:'3607.TW', name:'谷崧', sector:'機殼'}, {id:'3622.TW', name:'洋華', sector:'觸控面板'}, {id:'3645.TW', name:'達邁', sector:'PI薄膜'}, {id:'3669.TW', name:'圓展', sector:'視訊會議'},
+            {id:'3673.TW', name:'TPK-KY', sector:'觸控面板'}, {id:'3682.TW', name:'亞太電', sector:'電信'}, {id:'3694.TW', name:'海華', sector:'無線模組'}, {id:'3703.TW', name:'欣陸', sector:'營建土木'},
+            {id:'4306.TW', name:'炎洲', sector:'膠帶'}, {id:'4532.TW', name:'瑞智', sector:'壓縮機'}, {id:'4536.TW', name:'拓凱', sector:'碳纖維'}, {id:'4551.TW', name:'智伸科', sector:'汽車精密件'},
+            {id:'4552.TW', name:'力達-KY', sector:'空壓機'}, {id:'4720.TW', name:'德淵', sector:'熱熔膠'}, {id:'4722.TW', name:'國精化', sector:'樹脂化工'}, {id:'4739.TW', name:'康普', sector:'電池材料'},
+            {id:'4746.TW', name:'台耀', sector:'原料藥'}, {id:'4763.TW', name:'材料-KY', sector:'化工絲束'}, {id:'4915.TW', name:'致伸', sector:'電腦週邊'}, {id:'4916.TW', name:'事欣科', sector:'博弈機台'},
+            {id:'4927.TW', name:'泰鼎-KY', sector:'PCB'}, {id:'4930.TW', name:'燦星網', sector:'家電品牌'}, {id:'4934.TW', name:'太極', sector:'太陽能'}, {id:'4935.TW', name:'茂林-KY', sector:'導光板'},
+            {id:'4942.TW', name:'嘉彰', sector:'金屬沖壓'}, {id:'4943.TW', name:'康控-KY', sector:'聲學元件'}, {id:'4968.TW', name:'立積', sector:'RF射頻IC'}, {id:'4989.TW', name:'榮科', sector:'銅箔'},
+            {id:'4994.TW', name:'傳奇', sector:'遊戲'}, {id:'5203.TW', name:'訊連', sector:'軟體服務'}, {id:'5215.TW', name:'科嘉-KY', sector:'薄膜開關'}, {id:'5225.TW', name:'東科-KY', sector:'揚聲器'},
+            {id:'5234.TW', name:'達興材料', sector:'偏光板材料'}, {id:'5258.TW', name:'虹堡', sector:'POS刷卡機'}, {id:'5284.TW', name:'jpp-KY', sector:'航太金屬'}, {id:'5285.TW', name:'界霖', sector:'導線架'},
+            {id:'5305.TW', name:'敦南', sector:'分離式元件'}, {id:'5484.TW', name:'慧友', sector:'安控'}, {id:'5515.TW', name:'建國', sector:'營建'}, {id:'5519.TW', name:'隆大', sector:'營建'},
+            {id:'5521.TW', name:'工信', sector:'營建工程'}, {id:'5522.TW', name:'遠雄', sector:'營建'}, {id:'5531.TW', name:'鄉林', sector:'營建'}, {id:'5533.TW', name:'皇鼎', sector:'營建'},
+            {id:'6108.TW', name:'競國', sector:'PCB'}, {id:'6117.TW', name:'迎廣', sector:'機殼'}, {id:'6120.TW', name:'達運', sector:'背光模組'}, {id:'6128.TW', name:'上福', sector:'碳粉匣'},
+            {id:'6133.TW', name:'金橋', sector:'連接線'}, {id:'6136.TW', name:'富爾特', sector:'電子通路'}, {id:'6139.TW', name:'亞翔', sector:'無塵室工程'}, {id:'6141.TW', name:'柏承', sector:'PCB'},
+            {id:'6152.TW', name:'百一', sector:'機上盒'}, {id:'6155.TW', name:'鈞寶', sector:'被動元件'}, {id:'6164.TW', name:'華興', sector:'LED'}, {id:'6165.TW', name:'捷泰', sector:'連接器'},
+            {id:'6172.TW', name:'互別', sector:'電子零組件'}, {id:'6177.TW', name:'達麗', sector:'營建'}, {id:'6189.TW', name:'豐藝', sector:'電子通路'}, {id:'6192.TW', name:'巨路', sector:'程控儀表'},
+            {id:'6196.TW', name:'帆宣', sector:'半導體設備'}, {id:'6201.TW', name:'亞弘電', sector:'音響代工'}, {id:'6205.TW', name:'詮欣', sector:'連接器'}, {id:'6215.TW', name:'和椿', sector:'自動化零組件'},
+            {id:'6230.TW', name:'超眾', sector:'散熱模組'}, {id:'6243.TW', name:'迅杰', sector:'IC設計'}, {id:'6257.TW', name:'矽格', sector:'封測'}, {id:'6271.TW', name:'同欣電', sector:'陶瓷基板'},
+            {id:'6277.TW', name:'宏星', sector:'VR設備'}, {id:'6282.TW', name:'康舒', sector:'電源供應'}, {id:'6283.TW', name:'淳安', sector:'連接器'}, {id:'6289.TW', name:'華上', sector:'LED'},
+            {id:'6405.TW', name:'悅城', sector:'玻璃薄化'}, {id:'6409.TW', name:'旭隼', sector:'UPS電源'}, {id:'6412.TW', name:'群電', sector:'電源供應'}, {id:'6431.TW', name:'光麗-KY', sector:'化妝品'},
+            {id:'6442.TW', name:'光聖', sector:'光通訊'}, {id:'6449.TW', name:'鈺齊-KY', sector:'戶外鞋'}, {id:'6452.TW', name:'康友-KY', sector:'生技製藥'}, {id:'6464.TW', name:'台數科', sector:'有線電視'},
+            {id:'6552.TW', name:'易華電', sector:'COF載板'}, {id:'6558.TW', name:'興能高', sector:'微型電池'}, {id:'6573.TW', name:'虹揚-KY', sector:'二極體'}, {id:'6579.TW', name:'研揚', sector:'工業電腦'},
+            {id:'6582.TW', name:'申豐', sector:'乳膠'}, {id:'6592.TW', name:'和潤企業', sector:'汽車金融'}, {id:'6605.TW', name:'帝寶', sector:'車燈AM'}, {id:'6625.TW', name:'必應', sector:'展演企劃'},
+            {id:'6655.TW', name:'科定', sector:'塗裝木皮'}, {id:'6666.TW', name:'羅麗芬-KY', sector:'美容保養'}, {id:'6668.TW', name:'中揚光', sector:'手機鏡頭'}, {id:'6670.TW', name:'復盛應用', sector:'高爾夫球具'},
+            {id:'6671.TW', name:'三能-KY', sector:'烘焙器具'}, {id:'6672.TW', name:'騰輝電子-KY', sector:'銅箔基板'}, {id:'6674.TW', name:'鋐寶科技', sector:'網通設備'}, {id:'6698.TW', name:'旭暉應材', sector:'OLED光罩'},
+            {id:'6706.TW', name:'惠特', sector:'LED測試'}, {id:'6715.TW', name:'嘉基', sector:'高速傳輸線'}, {id:'6743.TW', name:'安普新', sector:'電競耳機'}, {id:'8021.TW', name:'尖點', sector:'PCB鑽針'},
+            {id:'8033.TW', name:'雷虎', sector:'無人機'}, {id:'8101.TW', name:'華冠', sector:'手機代工'}, {id:'8104.TW', name:'錸寶', sector:'OLED面板'}, {id:'8110.TW', name:'華東', sector:'封測'},
+            {id:'8131.TW', name:'福懋科', sector:'封測'}, {id:'8222.TW', name:'寶一', sector:'航太零件'}, {id:'8249.TW', name:'菱光', sector:'CIS感測'}, {id:'8271.TW', name:'宇瞻', sector:'記憶體模組'},
+            {id:'8341.TW', name:'弘帆', sector:'髮飾配件'}, {id:'8367.TW', name:'建新國際', sector:'報關物流'}, {id:'8374.TW', name:'羅昇', sector:'自動化機電'}, {id:'8404.TW', name:'百和興業-KY', sector:'鞋帶'},
+            {id:'8411.TW', name:'福貞-KY', sector:'金屬包材'}, {id:'8422.TW', name:'可寧衛', sector:'廢棄物處理'}, {id:'8427.TW', name:'基勝-KY', sector:'戶外傢俱'}, {id:'8429.TW', name:'金麗-KY', sector:'休閒鞋服'},
+            {id:'8442.TW', name:'威宏-KY', sector:'精品包袋'}, {id:'8443.TW', name:'阿瘦', sector:'皮鞋'}, {id:'8462.TW', name:'柏文', sector:'健身中心'}, {id:'8463.TW', name:'潤泰材', sector:'水泥建材'},
+            {id:'8467.TW', name:'波力-KY', sector:'碳纖維曲棍球'}, {id:'8473.TW', name:'山林水', sector:'水處理工程'}, {id:'8480.TW', name:'泰昇-KY', sector:'紙尿褲'}, {id:'8481.TW', name:'政伸', sector:'水標轉印'},
+            {id:'8482.TW', name:'商億-KY', sector:'客製化傢俱'}, {id:'8488.TW', name:'吉源-KY', sector:'金屬罐'}, {id:'8497.TW', name:'格威傳媒', sector:'廣告行銷'}, {id:'8499.TW', name:'鼎炫-KY', sector:'電子秤'},
+            {id:'8926.TW', name:'台汽電', sector:'汽電共生'}, {id:'8940.TW', name:'新天地', sector:'餐飲宴會'}, {id:'9905.TW', name:'大華', sector:'金屬製罐'}, {id:'9906.TW', name:'欣巴巴', sector:'營建'},
+            {id:'9908.TW', name:'大台北', sector:'天然氣'}, {id:'9918.TW', name:'欣天然', sector:'天然氣'}, {id:'9926.TW', name:'新海', sector:'天然氣'}, {id:'9927.TW', name:'泰銘', sector:'鉛合金'},
+            {id:'9928.TW', name:'中視', sector:'電視媒體'}, {id:'9929.TW', name:'秋雨', sector:'印刷'}, {id:'9931.TW', name:'欣高', sector:'天然氣'}, {id:'9935.TW', name:'慶豐富', sector:'窗簾'},
+            {id:'9937.TW', name:'全國', sector:'加油站'}, {id:'9946.TW', name:'三發地產', sector:'營建'}
+        ];
+
+        function safeGetItem(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+        function safeSetItem(key, value) { try { localStorage.setItem(key, value); } catch(e) {} }
+        function safeRemoveItem(key) { try { localStorage.removeItem(key); } catch(e) {} }
+
+        // 本機 LocalStorage DB 讀取
+        function getLocalDB() {
+            try {
+                const data = safeGetItem(STORAGE_KEY);
+                if (!data) return {};
+                const parsed = JSON.parse(data);
+                if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+                return parsed;
+            } catch (e) { safeRemoveItem(STORAGE_KEY); return {}; }
+        }
+
+        // 統一取得目前快取資料庫
+        function getDB() {
+            return memoryDB;
+        }
+
+        // 🌟 初始化從 Supabase 讀取歷史數據
+        async function initDBFromSupabase() {
+            memoryDB = getLocalDB();
+            if (!supabaseClient) return memoryDB;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('radar_history')
+                    .select('trade_date, records');
+                
+                if (error) {
+                    console.warn('Supabase 讀取失敗，使用本機暫存:', error.message);
+                    return memoryDB;
+                }
+                
+                if (data && Array.isArray(data)) {
+                    data.forEach(row => {
+                        memoryDB[row.trade_date] = row.records;
+                    });
+                    // 同步寫入本機快取
+                    safeSetItem(STORAGE_KEY, JSON.stringify(memoryDB));
+                }
+            } catch (err) {
+                console.warn('連線 Supabase 異常:', err);
+            }
+            return memoryDB;
+        }
+
+        let timerInterval = null; let scanStartTime = null;
+
+        function startTimer() {
+            scanStartTime = Date.now();
+            document_select('timer-display').innerText = `⏱️ 00:00`;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - scanStartTime) / 1000);
+                const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const s = String(elapsed % 60).padStart(2, '0');
+                document_select('timer-display').innerText = `⏱️ ${m}:${s}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (!scanStartTime) return "00分00秒";
+            const elapsed = Math.floor((Date.now() - scanStartTime) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            return `${m}分${s}秒`;
+        }
+
+        window.onload = async () => {
+            // 1. 初始化資料庫 (優先從 Supabase 拉取，降級使用 LocalStorage)
+            await initDBFromSupabase();
+            
+            try { cleanUpGhostDates(); } catch (e) {}
+            try { refreshDropdown(); setupDropdownListener(); setupSortListener(); } catch (e) {}
+            
+            initPCRGauge();
+            
+            document_select('panel-status-title').innerText = `多頭主力雷達 (${masterPool.length}檔防阻擋掃描中)...`;
+            await runHighSpeedScan(); 
+        }
+
+        function cleanUpGhostDates() {
+            try {
+                const db = memoryDB; let changed = false;
+                Object.keys(db).forEach(dateStr => {
+                    const d = new Date(dateStr);
+                    let dateMatchedHoliday = TWSE_HOLIDAYS.includes(dateStr);
+                    if(dateStr.includes("06-19")) dateMatchedHoliday = true;
+
+                    // 若為六日或國定假日，直接刪除
+                    if (isNaN(d.getTime()) || d.getDay() === 0 || d.getDay() === 6 || dateMatchedHoliday) { 
+                        delete db[dateStr]; changed = true; 
+                    } else if (Array.isArray(db[dateStr])) {
+                        const originalLen = db[dateStr].length;
+                        db[dateStr] = db[dateStr].filter(item => {
+                            if (!item.signals) return false;
+                            
+                            let score = 0; let hasMain = false;
+                            if (item.signals.includes('🚀 帶量突破月線')) { score += 4; hasMain = true; }
+                            else if (item.signals.includes('🚀 帶量月線上攻')) score += 2;
+                            if (item.signals.includes('✨ 5日/20日金叉')) { score += 4; hasMain = true; }
+                            if (item.signals.includes('📊 MACD 綠轉紅')) { score += 3; hasMain = true; }
+                            else if (item.signals.includes('📈 MACD 紅柱擴大')) score += 1;
+                            if (item.signals.includes('📈 連 3 日收紅K')) score += 1;
+                            if (item.signals.includes('🔥 轉折強勢紅K')) score += 1;
+                            if (item.signals.includes('💥 量增兩倍')) score += 1;
+                            
+                            if (!hasMain && score >= 5) score = 4;
+                            item.fireScore = score > 10 ? 10 : score;
+                            
+                            return item.fireScore >= 5;
+                        });
+                        
+                        if (db[dateStr].length !== originalLen) changed = true;
+                        
+                        const todayStr = getTaiwanTradingDate(new Date());
+                        if (db[dateStr].length === 0 && dateStr !== todayStr) {
+                            delete db[dateStr]; changed = true;
+                        }
+                    }
+                });
+                if(changed) safeSetItem(STORAGE_KEY, JSON.stringify(db));
+            } catch (e) { safeRemoveItem(STORAGE_KEY); }
+        }
+
+        function togglePcr() {
+            const content = document.getElementById('pcr-content');
+            const icon = document.getElementById('pcr-toggle-icon');
+            const header = document.querySelector('.pcr-header');
+            if (content.style.display === 'none') {
+                content.style.display = 'block'; icon.innerText = '▼'; header.style.borderBottom = '1px solid transparent';
+            } else {
+                content.style.display = 'none'; icon.innerText = '▲'; header.style.borderBottom = 'none';
+            }
+        }
+
+        function applyManualPCR() {
+            const inputVal = document.getElementById('pcr-manual-input').value;
+            const ratio = parseFloat(inputVal);
+            if (isNaN(ratio)) { alert("請輸入有效的數字！"); return; }
+            let dateStr = window.officialTradingDate || getTaiwanTradingDate();
+            updatePCRUI(ratio, dateStr + " (手動更新)");
+        }
+
+        function initPCRGauge() {
+            let fallbackDate = window.officialTradingDate || getTaiwanTradingDate();
+            updatePCRUI(100.0, fallbackDate + " (請手動輸入)");
+            document.getElementById('pcr-status-badge').innerText = "等待輸入...";
+            document.getElementById('pcr-status-badge').style.backgroundColor = "#334155";
+            document.getElementById('pcr-status-badge').style.color = "#cbd5e1";
+        }
+
+        function updatePCRUI(ratio, dateStr) {
+            document.getElementById('pcr-value-text').innerText = `${ratio.toFixed(1)}%`;
+            document.getElementById('pcr-date-text').innerText = `更新日期: ${dateStr}`;
+            const badge = document.getElementById('pcr-status-badge');
+            let color = '#cbd5e1', bg = '#334155', status = '多空平衡';
+
+            if(ratio >= 120) { status = '極度樂觀 (過熱)'; color = '#ef4444'; bg = 'rgba(239, 68, 68, 0.2)'; }
+            else if(ratio >= 100) { status = '偏多佈局'; color = '#f97316'; bg = 'rgba(249, 115, 22, 0.2)'; }
+            else if(ratio >= 80 && ratio < 100) { status = '偏空佈局'; color = '#22c55e'; bg = 'rgba(34, 197, 94, 0.2)'; }
+            else if(ratio < 80) { status = '極度悲觀 (過冷)'; color = '#3b82f6'; bg = 'rgba(59, 130, 246, 0.2)'; }
+
+            badge.innerText = status; badge.style.color = color; badge.style.backgroundColor = bg;
+            let clampedRatio = Math.max(70, Math.min(130, ratio));
+            let degree = ((clampedRatio - 70) / 60) * 180;
+            document.getElementById('gauge-needle').style.transform = `rotate(${degree}deg)`;
+        }
+
+        function document_select(id) { return document.getElementById(id); }
+
+        function setupDropdownListener() {
+            document_select('history-select').addEventListener('change', async (e) => {
+                const targetValue = e.target.value;
+                document_select('grid').innerHTML = '';
+                currentPool = []; 
+                if (targetValue === 'live') {
+                    document_select('progress-area').style.display = 'block';
+                    await runHighSpeedScan();
+                } else {
+                    document_select('progress-area').style.display = 'block';
+                    await loadAndCompareHistory(targetValue);
+                }
+            });
+        }
+
+        function setupSortListener() {
+            document_select('sort-select').addEventListener('change', () => applySortAndRender());
+            document_select('filter-select').addEventListener('change', () => applySortAndRender());
+        }
+
+        function applySortAndRender() {
+            const sortVal = document_select('sort-select').value;
+            const filterMinFire = parseInt(document_select('filter-select').value, 10);
+            
+            let filtered = currentPool.filter(item => item.fireScore >= filterMinFire);
+            
+            if (sortVal !== 'none') {
+                filtered.sort((a, b) => {
+                    const priceA = a.currentPrice !== null ? a.currentPrice : a.savedPrice;
+                    const priceB = b.currentPrice !== null ? b.currentPrice : b.savedPrice;
+                    if (sortVal === 'price-desc') return priceB - priceA;
+                    if (sortVal === 'price-asc') return priceA - priceB;
+                    if (sortVal === 'fire-desc') return b.fireScore - a.fireScore;
+                    if (sortVal === 'fire-asc') return a.fireScore - b.fireScore;
+                    return 0;
+                });
+            }
+            
+            document_select('grid').innerHTML = '';
+            filtered.forEach(item => {
+                renderCard(item.stock, item.savedPrice, item.currentPrice, item.signals, item.chartDataToDraw, item.isHistoryView, item.fireScore);
+            });
+        }
+
+        // 🌟 嚴格波段過濾引擎
+        function analyzeTrend(data) {
+            if (data.length < 30) return [];
+            const signals = [];
+            const tIndex = data.length - 1;
+            const yIndex = data.length - 2;
+
+            const getMA = (dataArray, period, index, key = 'close') => {
+                if (index < period - 1) return null;
+                let sum = 0;
+                for (let i = 0; i < period; i++) sum += dataArray[index - i][key];
+                return sum / period;
+            };
+
+            const ma20_t = getMA(data, 20, tIndex);
+            const ma20_y = getMA(data, 20, yIndex);
+            const ma5_t = getMA(data, 5, tIndex);
+            const ma5_y = getMA(data, 5, yIndex);
+            const vMA5_t = getMA(data, 5, tIndex, 'volume');
+
+            const today = data[tIndex];
+            const yesterday = data[yIndex];
+
+            // 1. 帶量突破關鍵均線
+            if (ma20_t && ma20_y && vMA5_t) {
+                if (yesterday.close <= ma20_y && today.close > ma20_t && today.volume > vMA5_t) {
+                    signals.push('🚀 帶量突破月線');
+                } else if (today.close > ma20_t && today.volume > vMA5_t && today.close > today.open) {
+                    signals.push('🚀 帶量月線上攻');
+                }
+            }
+
+            // 2. 均線黃金交叉
+            if (ma5_y !== null && ma20_y !== null && ma5_t !== null && ma20_t !== null) {
+                if (ma5_y <= ma20_y && ma5_t > ma20_t) {
+                    signals.push('✨ 5日/20日金叉');
+                }
+            }
+
+            // 3. MACD 柱狀圖翻紅 或 持續擴大
+            const calcEMA = (dataArray, period) => {
+                const k = 2 / (period + 1);
+                let ema = [dataArray[0].close];
+                for (let i = 1; i < dataArray.length; i++) {
+                    ema.push(dataArray[i].close * k + ema[i - 1] * (1 - k));
+                }
+                return ema;
+            };
+            const ema12 = calcEMA(data, 12);
+            const ema26 = calcEMA(data, 26);
+            const dif = ema12.map((v, i) => v - ema26[i]);
+            
+            let dem = [dif[0]];
+            const k9 = 2 / 10; 
+            for (let i = 1; i < dif.length; i++) {
+                dem.push(dif[i] * k9 + dem[i - 1] * (1 - k9));
+            }
+            const osc = dif.map((v, i) => v - dem[i]);
+            
+            const osc_t = osc[tIndex];
+            const osc_y = osc[yIndex];
+
+            if (osc_t !== undefined && osc_y !== undefined) {
+                if (osc_t > 0 && osc_y <= 0) {
+                    signals.push('📊 MACD 綠轉紅');
+                } else if (osc_t > 0 && osc_t > osc_y) {
+                    signals.push('📈 MACD 紅柱擴大');
+                }
+            }
+
+            // 4. K 線型態輔助
+            if (tIndex >= 2) {
+                const day3 = data[tIndex - 2];
+                if (today.close > today.open && yesterday.close > yesterday.open && day3.close > day3.open) { 
+                    signals.push('📈 連 3 日收紅K'); 
+                }
+                if (today.close > today.open && today.close > yesterday.close && yesterday.close <= yesterday.open) { 
+                    signals.push('🔥 轉折強勢紅K'); 
+                }
+            }
+
+            return signals;
+        }
+
+        // 🌟 10星大滿貫權重引擎
+        function calculateFireScore(signals, chartDataToDraw) {
+            let score = 0; 
+            let hasMain = false; 
+            
+            if (signals.includes('🚀 帶量突破月線')) { score += 4; hasMain = true; }
+            else if (signals.includes('🚀 帶量月線上攻')) score += 2;
+
+            if (signals.includes('✨ 5日/20日金叉')) { score += 4; hasMain = true; }
+            
+            if (signals.includes('📊 MACD 綠轉紅')) { score += 3; hasMain = true; }
+            else if (signals.includes('📈 MACD 紅柱擴大')) score += 1;
+
+            if (signals.includes('📈 連 3 日收紅K')) score += 1;
+            if (signals.includes('🔥 轉折強勢紅K')) score += 1;
+            
+            if (chartDataToDraw && chartDataToDraw.length >= 2) {
+                const latestD = chartDataToDraw[chartDataToDraw.length - 1];
+                const prevD = chartDataToDraw[chartDataToDraw.length - 2];
+                if (latestD.volume > prevD.volume * 2) {
+                    score += 1;
+                    if (!signals.includes('💥 量增兩倍')) signals.push('💥 量增兩倍');
+                }
+            }
+            
+            if (!hasMain && score >= 5) {
+                score = 4;
+            }
+            
+            return score > 10 ? 10 : score;
+        }
+
+        function refreshDropdown() {
+            const select = document_select('history-select');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="live">📡 執行今日即時掃描</option>';
+            const db = memoryDB; 
+            const savedDates = Object.keys(db).sort().reverse(); 
+            savedDates.forEach(date => {
+                const option = document.createElement('option'); option.value = date;
+                const count = Array.isArray(db[date]) ? db[date].length : 0;
+                option.innerText = `📁 歷史覆盤 [${date}] (${count}檔)`; select.appendChild(option);
+            });
+            if (currentVal && Array.from(select.options).some(opt => opt.value === currentVal)) {
+                select.value = currentVal;
+            }
+        }
+
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 8000 } = options; 
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id); return response;
+            } catch (e) { clearTimeout(id); throw e; }
+        }
+
+        const getProxyList = (target) => {
+            let list = [
+                { type: 'raw', url: target }, 
+                { type: 'json', url: `https://api.allorigins.win/get?url=${encodeURIComponent(target)}` },
+                { type: 'raw', url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(target)}` },
+                { type: 'raw', url: `https://corsproxy.io/?url=${encodeURIComponent(target)}` },
+                { type: 'raw', url: `https://thingproxy.freeboard.io/fetch/${target}` },
+                { type: 'raw', url: `https://yacdn.org/proxy/${target}` }
+            ];
+            
+            if (activeFastProxy) {
+                if (activeFastProxy !== 'DIRECT') {
+                    list.sort((a, b) => a.url.includes(activeFastProxy) ? -1 : b.url.includes(activeFastProxy) ? 1 : 0);
+                }
+            } else {
+                const direct = list.shift();
+                list.sort(() => Math.random() - 0.5);
+                list.unshift(direct);
+            }
+            return list;
+        };
+
+        async function fetchFinMindFallback(stockIdStr) {
+            try {
+                const cleanId = stockIdStr.replace('.TW', '').replace('.TWO', '');
+                let d = new Date(); d.setMonth(d.getMonth() - 3);
+                const startDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const fmUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${cleanId}&start_date=${startDate}`;
+                
+                const res = await fetchWithTimeout(fmUrl, { timeout: 6000 });
+                if(res.ok) {
+                    const json = await res.json();
+                    if(json.msg === 'success' && json.data && json.data.length > 0) {
+                        let cleanData = [];
+                        json.data.forEach(item => {
+                            cleanData.push({
+                                date: item.date, open: item.open, high: item.max, low: item.min, close: item.close, volume: item.Trading_Volume
+                            });
+                        });
+                        return cleanData;
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        async function fetchStockData(stock, retries = 2, isFlipped = false) {
+            const queryNode = Math.random() > 0.5 ? 'query1' : 'query2';
+            const targetUrl = `https://${queryNode}.finance.yahoo.com/v8/finance/chart/${stock.id}?range=3mo&interval=1d`;
+            
+            const currentProxies = getProxyList(targetUrl);
+
+            for (let proxy of currentProxies) {
+                try {
+                    await new Promise(r => setTimeout(r, 150)); 
+                    const res = await fetchWithTimeout(proxy.url, { cache: 'no-store', timeout: 7000 }); 
+                    
+                    if (res.status === 404 && !isFlipped) {
+                        stock.id = stock.id.endsWith('.TW') ? stock.id.replace('.TW', '.TWO') : stock.id.replace('.TWO', '.TW');
+                        return fetchStockData(stock, retries, true);
+                    }
+
+                    if (!res.ok) continue; 
+                    
+                    let json;
+                    if (proxy.type === 'json') {
+                        const wrapper = await res.json();
+                        if(!wrapper.contents) continue;
+                        json = JSON.parse(wrapper.contents); 
+                    } else {
+                        json = await res.json();
+                    }
+
+                    if (!json.chart || !json.chart.result) continue;
+                    
+                    if (!activeFastProxy && proxy.url !== targetUrl) {
+                        activeFastProxy = proxy.url.split('?')[0]; 
+                    } else if (!activeFastProxy && proxy.url === targetUrl) {
+                        activeFastProxy = 'DIRECT'; 
+                    }
+
+                    const result = json.chart.result[0]; const quote = result.indicators.quote[0];
+                    let cleanData = [];
+                    
+                    for(let j = 0; j < quote.close.length; j++) {
+                        if (quote.close[j] !== null && quote.open[j] !== null) {
+                            const twTime = result.timestamp[j] * 1000 + (8 * 3600 * 1000);
+                            const d = new Date(twTime);
+                            const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+                            cleanData.push({ 
+                                date: dateStr, open: quote.open[j], high: quote.high[j], 
+                                low: quote.low[j], close: quote.close[j], volume: quote.volume[j] 
+                            });
+                        }
+                    }
+
+                    if (cleanData.length > 0 && result.meta && result.timestamp) {
+                        const meta = result.meta;
+                        const livePrice = meta.regularMarketPrice;
+                        const liveVol = meta.regularMarketVolume || 0;
+                        const metaTime = meta.regularMarketTime;
+                        const lastTime = result.timestamp[result.timestamp.length - 1];
+                        const prevClose = meta.chartPreviousClose || meta.previousClose || livePrice;
+
+                        if (metaTime && lastTime && (metaTime - lastTime > 43200)) {
+                            const twTime = metaTime * 1000 + (8 * 3600 * 1000);
+                            const d = new Date(twTime);
+                            const stitchedDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+                            cleanData.push({
+                                date: stitchedDateStr, open: prevClose, high: Math.max(prevClose, livePrice), low: Math.min(prevClose, livePrice), close: livePrice, volume: liveVol
+                            });
+                        } else {
+                            let lastCandle = cleanData[cleanData.length - 1];
+                            lastCandle.close = livePrice; lastCandle.high = Math.max(lastCandle.high, livePrice);
+                            lastCandle.low = Math.min(lastCandle.low, livePrice); lastCandle.volume = Math.max(lastCandle.volume, liveVol);
+                        }
+                        
+                        if (!window.officialTradingDate) {
+                            window.officialTradingDate = cleanData[cleanData.length - 1].date;
+                        }
+                    }
+                    if(cleanData.length > 0) return cleanData;
+                } catch (err) {}
+            }
+
+            try {
+                const fmData = await fetchFinMindFallback(stock.id);
+                if (fmData && fmData.length > 0) {
+                    if (!window.officialTradingDate) window.officialTradingDate = fmData[fmData.length - 1].date;
+                    return fmData;
+                }
+            } catch(e) {}
+
+            if (retries > 0) {
+                activeFastProxy = null;
+                await new Promise(r => setTimeout(r, 1500));
+                return fetchStockData(stock, retries - 1, isFlipped);
+            }
+            throw new Error('流量冷卻中');
+        }
+
+        async function runHighSpeedScan() {
+            liveScannedResults = []; currentPool = []; 
+            window.officialTradingDate = null; 
+            activeFastProxy = null; 
+            
+            document_select('scan-icon').className = 'loader-icon'; document_select('scan-icon').innerText = '';
+            document_select('panel-status-title').innerText = `多頭主力雷達 (${masterPool.length}檔波段嚴選掃描中)...`;
+            
+            startTimer();
+            const batchSize = 2; const total = masterPool.length;
+            
+            for (let i = 0; i < total; i += batchSize) {
+                if(document_select('history-select').value !== 'live') { stopTimer(); return; }
+
+                const batch = masterPool.slice(i, i + batchSize);
+                const progressPercent = Math.round((i / total) * 100);
+                document_select('progress').style.width = progressPercent + `%`;
+                document_select('percentage').innerText = progressPercent + `%`;
+                document_select('current-action').innerText = `巡航分析: ${batch.map(s => s.name).join(', ')} (邊掃邊存中...)`;
+
+                await Promise.all(batch.map(async (stock) => {
+                    try {
+                        const data = await fetchStockData(stock);
+                        if (data && data.length >= 30) {
+                            const todayNode = data[data.length - 1];
+                            const todayPrice = todayNode.close; const todayVolume = todayNode.volume;
+                            
+                            if (todayPrice > 5 && todayPrice < 2000 && todayVolume >= 2000000) {
+                                const signals = analyzeTrend(data);
+                                if (signals.length > 0) {
+                                    const sliceData = data.slice(-50);
+                                    const fireScore = calculateFireScore(signals, sliceData);
+                                    
+                                    if (fireScore >= 5) {
+                                        const newItem = {
+                                            stock: stock, savedPrice: todayPrice, currentPrice: todayPrice,
+                                            signals: signals, chartDataToDraw: sliceData, isHistoryView: false, fireScore: fireScore
+                                        };
+                                        liveScannedResults.push(newItem); currentPool.push(newItem);
+                                        applySortAndRender(); 
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) { console.warn(`跳過 ${stock.name}`, err); }
+                }));
+                await new Promise(r => setTimeout(r, 1800)); 
+                
+                // 本地快取即時存檔
+                saveRadarData(false);
+            }
+            const totalTime = stopTimer();
+            finishProgress(`全市場 ${masterPool.length} 檔主力股掃描完畢！(總耗時: ${totalTime})`, '今日雷達掃描任務完成');
+            
+            // 掃描完畢後完整同步寫入 Supabase 雲端
+            saveRadarData(true);
+            applySortAndRender(); 
+        }
+
+        async function loadAndCompareHistory(dateStr) {
+            document_select('scan-icon').className = 'loader-icon'; document_select('scan-icon').innerText = '';
+            document_select('panel-status-title').innerText = `正在回溯 [${dateStr}] 名單...`;
+            const db = memoryDB; 
+            const historyItems = Array.isArray(db[dateStr]) ? db[dateStr] : [];
+            if(historyItems.length === 0) {
+                document_select('grid').innerHTML = `<div style="color:#64748b; padding:20px;">當日無符合嚴格 5 星標準之股票。</div>`;
+                finishProgress('比對結束', `歷史名單為空`); return;
+            }
+            const total = historyItems.length; currentPool = [];
+            window.officialTradingDate = null; 
+            activeFastProxy = null;
+            startTimer();
+
+            for (let i = 0; i < total; i++) {
+                if(document_select('history-select').value !== dateStr) { stopTimer(); return; }
+                const item = historyItems[i];
+                document_select('progress').style.width = Math.round(((i + 1) / total) * 100) + `%`;
+                document_select('percentage').innerText = Math.round(((i + 1) / total) * 100) + `%`;
+                document_select('current-action').innerText = `時空校正中: ${item.stock.name}`;
+                
+                try {
+                    const latestData = await fetchStockData(item.stock);
+                    let currentPrice = latestData ? latestData[latestData.length - 1].close : null;
+                    let chartDataToDraw = latestData ? latestData.slice(-50) : [];
+                    let correctedSavedPrice = item.savedPrice || item.price; 
+                    let newScore = calculateFireScore(item.signals || [], chartDataToDraw);
+                    
+                    if (newScore >= 5) {
+                        const newItem = {
+                            stock: item.stock, savedPrice: correctedSavedPrice, currentPrice: currentPrice,
+                            signals: item.signals, chartDataToDraw: chartDataToDraw, isHistoryView: true, fireScore: newScore
+                        };
+                        currentPool.push(newItem); applySortAndRender();
+                    }
+                } catch (err) { 
+                    let newScore = calculateFireScore(item.signals || [], []);
+                    if (newScore >= 5) {
+                        const newItem = {
+                            stock: item.stock, savedPrice: item.savedPrice || item.price, currentPrice: null,
+                            signals: item.signals, chartDataToDraw: [], isHistoryView: true, fireScore: newScore
+                        };
+                        currentPool.push(newItem); applySortAndRender();
+                    }
+                }
+                await new Promise(r => setTimeout(r, 1500));
+            }
+            const totalTime = stopTimer();
+            finishProgress(`歷史名單 [${dateStr}] 價位精確對齊完成！(總耗時: ${totalTime})`, '覆盤績效與最新K線已更新');
+            applySortAndRender();
+        }
+
+        function finishProgress(actionMsg, titleMsg) {
+            document_select('progress').style.width = `100%`; document_select('percentage').innerText = `100%`;
+            document_select('current-action').innerText = actionMsg;
+            document_select('scan-icon').className = ''; document_select('scan-icon').innerText = '✅';
+            document_select('panel-status-title').innerText = titleMsg;
+            setTimeout(() => { document_select('progress-area').style.display = 'none'; }, 2000);
+        }
+
+        function getTaiwanTradingDate(dateObj) {
+            let d = dateObj ? new Date(dateObj) : new Date();
+            if (isNaN(d.getTime())) d = new Date();
+            let localD = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            
+            while (true) {
+                let day = localD.getDay();
+                let dateStr = `${localD.getFullYear()}-${String(localD.getMonth() + 1).padStart(2, '0')}-${String(localD.getDate()).padStart(2, '0')}`;
+                
+                let dateMatchedHoliday = TWSE_HOLIDAYS.includes(dateStr);
+                if (dateStr.includes('06-19')) dateMatchedHoliday = true;
+
+                if (day === 0 || day === 6 || dateMatchedHoliday) {
+                    localD.setDate(localD.getDate() - 1);
+                } else {
+                    return dateStr;
+                }
+            }
+        }
+
+        // 🌟 整合儲存：本機 LocalStorage + Supabase 雲端非同步同步
+        let supabaseDebounceTimer = null;
+        async function saveRadarData(syncToSupabaseImmediately = false) {
+            try {
+                let rawDate = window.officialTradingDate || new Date();
+                const safeDateStr = getTaiwanTradingDate(rawDate);
+                
+                const minimalResults = liveScannedResults.map(item => ({
+                    stock: {
+                        id: item.stock.id,
+                        name: item.stock.name,
+                        sector: item.stock.sector || '台股'
+                    },
+                    savedPrice: item.savedPrice, 
+                    signals: item.signals, 
+                    fireScore: item.fireScore
+                }));
+                
+                // 1. 更新記憶體與 LocalStorage
+                memoryDB[safeDateStr] = minimalResults;
+                const sortedDates = Object.keys(memoryDB).sort();
+                if (sortedDates.length > 30) { 
+                    for(let i = 0; i < sortedDates.length - 30; i++) delete memoryDB[sortedDates[i]]; 
+                }
+                safeSetItem(STORAGE_KEY, JSON.stringify(memoryDB)); 
+                refreshDropdown(); 
+
+                // 2. 同步至 Supabase (節流避免打爆頻率)
+                if (supabaseClient) {
+                    if (syncToSupabaseImmediately) {
+                        if (supabaseDebounceTimer) clearTimeout(supabaseDebounceTimer);
+                        await supabaseClient
+                            .from('radar_history')
+                            .upsert({
+                                trade_date: safeDateStr,
+                                records: minimalResults
+                            }, { onConflict: 'trade_date' });
+                        console.log('✅ Supabase 雲端資料同步完成:', safeDateStr);
+                    } else {
+                        if (supabaseDebounceTimer) clearTimeout(supabaseDebounceTimer);
+                        supabaseDebounceTimer = setTimeout(async () => {
+                            try {
+                                await supabaseClient
+                                    .from('radar_history')
+                                    .upsert({
+                                        trade_date: safeDateStr,
+                                        records: minimalResults
+                                    }, { onConflict: 'trade_date' });
+                            } catch (err) { console.warn('Supabase 背景同步略過:', err); }
+                        }, 5000);
+                    }
+                }
+            } catch (e) { console.error('儲存紀錄失敗:', e); }
+        }
+
+        function drawProfessionalChart(canvasId, chartDataArray) {
+            const canvas = document_select(canvasId); if (!canvas || !chartDataArray || chartDataArray.length < 30) return;
+            const ctx = canvas.getContext('2d'); const drawDays = 30; 
+            const startIndex = chartDataArray.length - drawDays; const chartData = chartDataArray.slice(-drawDays);
+            const width = canvas.width; const height = canvas.height;
+            const priceAreaHeight = height * 0.70; const volAreaHeight = height * 0.25; const padding = 5; 
+            
+            let maxPrice = -Infinity, minPrice = Infinity, maxVol = 0;
+            chartData.forEach(d => {
+                if (d.high > maxPrice) maxPrice = d.high; if (d.low < minPrice) minPrice = d.low; if (d.volume > maxVol) maxVol = d.volume;
+            });
+            const priceRange = maxPrice - minPrice || 1;
+            const getScaleY = (price) => padding + priceAreaHeight - padding - ((price - minPrice) / priceRange) * (priceAreaHeight - padding);
+            const getVolY = (vol) => height - (vol / maxVol) * volAreaHeight;
+            const barWidth = width / drawDays; const spacing = 1.5;
+
+            const ma5Points = [], ma20Points = [];
+            for(let i = 0; i < drawDays; i++) {
+                const actualIndex = startIndex + i; let sum5 = 0, sum20 = 0;
+                for(let j = 0; j < 5; j++) sum5 += chartDataArray[actualIndex - j].close;
+                for(let j = 0; j < 20; j++) sum20 += chartDataArray[actualIndex - j].close;
+                const x = i * barWidth + barWidth / 2;
+                ma5Points.push({ x: x, y: getScaleY(sum5 / 5) }); ma20Points.push({ x: x, y: getScaleY(sum20 / 20) });
+            }
+
+            chartData.forEach((d, i) => {
+                const x = i * barWidth + barWidth / 2; const isUp = d.close >= d.open; const color = isUp ? '#ef4444' : '#22c55e';
+                ctx.strokeStyle = color; ctx.fillStyle = color;
+                const volX = i * barWidth + spacing; const volW = barWidth - (spacing * 2); const volY = getVolY(d.volume);
+                ctx.globalAlpha = 0.4; ctx.fillRect(volX, volY, volW, height - volY); ctx.globalAlpha = 1.0;
+                ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, getScaleY(d.high)); ctx.lineTo(x, getScaleY(d.low)); ctx.stroke();
+                let boxH = Math.abs(getScaleY(d.open) - getScaleY(d.close)); if (boxH < 1) boxH = 1;
+                ctx.fillRect(volX, Math.min(getScaleY(d.open), getScaleY(d.close)), volW, boxH);
+            });
+            const drawLine = (points, color) => {
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+                points.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.stroke();
+            }; drawLine(ma5Points, '#eab308'); drawLine(ma20Points, '#3b82f6');
+        }
+
+        function renderCard(stock, savedPrice, currentPrice, signals, chartDataToDraw, isHistoryView, fireScore) {
+            const grid = document_select('grid');
+            const tagsHtml = signals.map(sig => `<div class="tag">${sig}</div>`).join('');
+            const canvasId = `canvas-${stock.id.replace('.', '-')}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            const cleanId = stock.id.replace('.TW', '').replace('.TWO', '');
+            const dogUrl = `https://statementdog.com/analysis/${cleanId}`;
+            
+            const activeFires = '🔥'.repeat(fireScore); 
+            const inactiveFires = '🔥'.repeat(10 - fireScore);
+            
+            let currentPriceHtml = '', returnHtml = '';
+
+            if (currentPrice === null) {
+                currentPriceHtml = `<span class="error-text">⚠️ 流量冷卻中</span>`;
+                returnHtml = `<span class="comp-val-return" style="color: #64748b;">--</span>`;
+            } else {
+                const returnPercent = (((currentPrice - savedPrice) / savedPrice) * 100).toFixed(1);
+                let returnColor = '#94a3b8'; let returnSign = '';
+                if (parseFloat(returnPercent) > 0) { returnColor = '#ef4444'; returnSign = '+'; } 
+                else if (parseFloat(returnPercent) < 0) { returnColor = '#22c55e'; }
+
+                currentPriceHtml = `<span class="comp-val-new" style="color: ${isHistoryView ? '#f8fafc' : '#a855f7'}">${isHistoryView ? currentPrice.toFixed(1) : '監測中'}</span>`;
+                returnHtml = `<span class="comp-val-return" style="color: ${returnColor}">${returnSign}${returnPercent}%</span>`;
+            }
+
+            const cardHtml = `
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="stock-name">${stock.name}<span class="sector-tag">${stock.sector || '台股'}</span></h3>
+                            <span class="stock-id">${cleanId}</span>
+                            <a href="${dogUrl}" target="_blank" class="dog-link" title="前往財報狗查看基本面">🐶 財報狗</a>
+                        </div>
+                        <div class="fire-rating-box"><div class="fire-rating-title">波段潛力 (滿分10星)</div><div class="fire-rating-icons"><span class="fire-active">${activeFires}</span><span class="fire-inactive">${inactiveFires}</span></div></div>
+                    </div>
+                    <div class="price-compare">
+                        <div class="comp-item"><span class="comp-label">${isHistoryView ? '入選日收盤' : '今日收盤'}</span><span class="comp-val-old">${savedPrice.toFixed(1)}</span></div>
+                        <div class="comp-item"><span class="comp-label">${isHistoryView ? '當前最新' : '狀態'}</span>${currentPriceHtml}</div>
+                        <div class="comp-item"><span class="comp-label">區間報酬</span>${returnHtml}</div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-legend"><span class="legend-5ma">一 5MA</span> &nbsp;<span class="legend-20ma">一 20MA</span></div>
+                        <canvas id="${canvasId}" width="260" height="110"></canvas>
+                    </div>
+                    <div class="tags">${tagsHtml}</div>
+                </div>`;
+            grid.insertAdjacentHTML('beforeend', cardHtml); drawProfessionalChart(canvasId, chartDataToDraw);
+        }
+    </script>
+</body>
+</html>
